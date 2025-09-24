@@ -33,7 +33,6 @@ export default function App() {
       setLoading(false);
     }
   };
-
   const handleLogout = () => {
     setLoggedIn(false);
     setCurrentScreen('login'); // Volver a la pantalla de login al cerrar sesión
