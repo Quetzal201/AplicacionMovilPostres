@@ -7,7 +7,7 @@ const getBaseUrl = () => {
     // Dynamically require to avoid circular deps when bundling
     const { Platform } = require('react-native');
     if (Platform.OS === 'android') {
-      return 'http://10.0.2.2:3000';
+      return 'https://api-aplicacion-movil-nine.vercel.app';
     }
   } catch (e) {
     // Fallback to localhost if Platform is not available
