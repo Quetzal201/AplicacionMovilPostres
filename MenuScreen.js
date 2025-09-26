@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable, SafeAreaView, StatusBar } from 'react-native';
 
 export default function MenuScreen() {
   const [selectedItem, setSelectedItem] = React.useState(null);
@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
   },
   menuHeader: {
     width: '100%',
+    paddingTop: StatusBar.currentHeight, // Asegura que el contenido esté debajo de la barra de estado
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
