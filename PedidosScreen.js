@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar } from 'react-native';
 
 const pedidosData = [
   {
@@ -99,6 +99,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    paddingTop: StatusBar.currentHeight, // Asegura que el contenido esté debajo de la barra de estado
   },
   title: {
     fontSize: 28,
