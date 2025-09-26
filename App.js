@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Platform } from 'react-native';
 import React from 'react';
 import { registerUser, loginUser, API_BASE } from './api';
 import MenuScreen from './MenuScreen';
@@ -121,6 +121,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     width: '100%',
+    paddingBottom: Platform.OS === 'android' ? 20 : 0, // Ajuste para la barra de navegación del sistema en Android
   },
   menuHeader: {
     width: '100%',
