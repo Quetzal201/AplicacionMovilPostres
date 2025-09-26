@@ -191,7 +191,6 @@ const styles = StyleSheet.create({
   },
   menuHeader: {
     width: '100%',
-    paddingTop: 12,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
