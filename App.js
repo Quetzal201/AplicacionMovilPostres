@@ -11,7 +11,7 @@ export default function App() {
   const [contrasena, setContrasena] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [loggedIn, setLoggedIn] = React.useState(false);
-  const [currentScreen, setCurrentScreen] = React.useState('menu'); // 'menu' | 'pedidos'
+  const [currentScreen, setCurrentScreen] = React.useState('menu'); // 'menu' | 'pedidos' 
 
   const colorPrimario = '#ff1fa9';
 

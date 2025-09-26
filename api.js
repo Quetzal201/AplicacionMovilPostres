@@ -12,7 +12,7 @@ const getBaseUrl = () => {
   } catch (e) {
     // Fallback to localhost if Platform is not available
   }
-  return 'http://localhost:3000';
+  return 'https://api-aplicacion-movil-nine.vercel.app';
 };
 
 export const API_BASE = getBaseUrl();

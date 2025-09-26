@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable, SafeAreaView } from 'react-native';
 
 export default function MenuScreen() {
   const [selectedItem, setSelectedItem] = React.useState(null);
@@ -66,94 +66,100 @@ export default function MenuScreen() {
   const cartTotal = cartItems.reduce((sum, it) => sum + it.price * it.qty, 0);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.menuHeader}>
-        <Text style={styles.menuTitle}>Menu</Text>
-        <TouchableOpacity onPress={() => setIsCartVisible(true)}>
-          <Text style={styles.cartIcon}>🛒</Text>
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
-        columnWrapperStyle={{ justifyContent: 'space-between' }}
-        data={items}
-        renderItem={renderItem}
-        keyExtractor={(it) => it.id}
-        numColumns={2}
-        style={{ width: '100%' }}
-      />
-      <Modal
-        transparent
-        visible={isModalVisible}
-        animationType="fade"
-        onRequestClose={closeModal}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            {selectedItem && (
-              <>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.modalTitle}>{selectedItem.name}</Text>
-                  <Pressable onPress={closeModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
-                </View>
-                <Text style={styles.modalLabel}>Descripción:</Text>
-                <Text style={styles.modalText}>{selectedItem.description}</Text>
-                <Text style={[styles.modalText, { marginTop: 8 }]}>Cantidad disponible: {selectedItem.stock}</Text>
-                <Text style={[styles.modalPrice]}>$ {selectedItem.price}</Text>
-                <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]} onPress={addToCart}>
-                  <Text style={styles.addButtonText}>Agregar</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.menuHeader}>
+          <Text style={styles.menuTitle}>Menu</Text>
+          <TouchableOpacity onPress={() => setIsCartVisible(true)}>
+            <Text style={styles.cartIcon}>🛒</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
-
-      <Modal
-        transparent
-        visible={isCartVisible}
-        animationType="fade"
-        onRequestClose={() => setIsCartVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={styles.modalTitle}>Carrito</Text>
-              <Pressable onPress={() => setIsCartVisible(false)}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
-            </View>
-
-            {cartItems.length === 0 ? (
-              <Text style={{ marginTop: 12 }}>Tu carrito está vacío</Text>
-            ) : (
-              <View style={{ marginTop: 12 }}>
-                {cartItems.map((it) => (
-                  <View key={it.id} style={styles.cartRow}>
-                    <Text style={{ flex: 1 }}>{it.name}</Text>
-                    <View style={styles.qtyBox}>
-                      <TouchableOpacity onPress={() => decrementItem(it.id)}>
-                        <Text style={styles.qtyBtn}>-</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.qtyText}>{it.qty}</Text>
-                      <TouchableOpacity onPress={() => incrementItem(it.id)}>
-                        <Text style={styles.qtyBtn}>+</Text>
-                      </TouchableOpacity>
-                    </View>
+        <FlatList
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
+          columnWrapperStyle={{ justifyContent: 'space-between' }}
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={(it) => it.id}
+          numColumns={2}
+          style={{ width: '100%' }}
+        />
+        <Modal
+          transparent
+          visible={isModalVisible}
+          animationType="fade"
+          onRequestClose={closeModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              {selectedItem && (
+                <>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.modalTitle}>{selectedItem.name}</Text>
+                    <Pressable onPress={closeModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
                   </View>
-                ))}
-                <Text style={[styles.modalText, { marginTop: 8 }]}>Total: {cartTotal}</Text>
-                <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]}> 
-                  <Text style={styles.addButtonText}>Comprar</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                  <Text style={styles.modalLabel}>Descripción:</Text>
+                  <Text style={styles.modalText}>{selectedItem.description}</Text>
+                  <Text style={[styles.modalText, { marginTop: 8 }]}>Cantidad disponible: {selectedItem.stock}</Text>
+                  <Text style={[styles.modalPrice]}>$ {selectedItem.price}</Text>
+                  <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]} onPress={addToCart}>
+                    <Text style={styles.addButtonText}>Agregar</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+
+        <Modal
+          transparent
+          visible={isCartVisible}
+          animationType="fade"
+          onRequestClose={() => setIsCartVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.modalTitle}>Carrito</Text>
+                <Pressable onPress={() => setIsCartVisible(false)}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
+              </View>
+
+              {cartItems.length === 0 ? (
+                <Text style={{ marginTop: 12 }}>Tu carrito está vacío</Text>
+              ) : (
+                <View style={{ marginTop: 12 }}>
+                  {cartItems.map((it) => (
+                    <View key={it.id} style={styles.cartRow}>
+                      <Text style={{ flex: 1 }}>{it.name}</Text>
+                      <View style={styles.qtyBox}>
+                        <TouchableOpacity onPress={() => decrementItem(it.id)}>
+                          <Text style={styles.qtyBtn}>-</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.qtyText}>{it.qty}</Text>
+                        <TouchableOpacity onPress={() => incrementItem(it.id)}>
+                          <Text style={styles.qtyBtn}>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                  <Text style={[styles.modalText, { marginTop: 8 }]}>Total: {cartTotal}</Text>
+                  <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]}>
+                    <Text style={styles.addButtonText}>Comprar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
     width: '100%',

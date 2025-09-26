@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 
 const pedidosData = [
   {
@@ -69,23 +69,28 @@ const AccordionItem = ({ pedido }) => {
 
 export default function PedidosScreen() {
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Pedidos</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Pedidos</Text>
+        </View>
+        <ScrollView style={styles.scrollView}>
+          {pedidosData.map((pedido) => (
+            <AccordionItem key={pedido.id} pedido={pedido} />
+          ))}
+        </ScrollView>
       </View>
-      <ScrollView style={styles.scrollView}>
-        {pedidosData.map((pedido) => (
-          <AccordionItem key={pedido.id} pedido={pedido} />
-        ))}
-      </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f8f8',
+  },
   container: {
     flex: 1,
-    paddingTop: 50,
     paddingHorizontal: 20,
     backgroundColor: '#f8f8f8',
   },
