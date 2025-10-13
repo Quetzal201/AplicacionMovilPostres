@@ -4,14 +4,15 @@ import React from 'react';
 import { registerUser, loginUser, API_BASE } from './api';
 import MenuScreen from './MenuScreen';
 import PedidosScreen from './PedidosScreen';
+import { UserProvider, useUser } from './contexts/UserContext';
 
-export default function App() {
+function AppContent() {
+  const { isLoggedIn, login, logout, isLoading } = useUser();
   const [mode, setMode] = React.useState('login'); // 'login' | 'register'
   const [correo, setCorreo] = React.useState('');
   const [contrasena, setContrasena] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [loggedIn, setLoggedIn] = React.useState(false);
-  const [currentScreen, setCurrentScreen] = React.useState('menu'); // 'menu' | 'pedidos' 
+  const [currentScreen, setCurrentScreen] = React.useState('menu'); // 'menu' | 'pedidos'
 
   const colorPrimario = '#ff1fa9';
 
@@ -19,13 +20,13 @@ export default function App() {
     try {
       setLoading(true);
       if (mode === 'register') {
-        await registerUser({ correo, contrasena });
+        await registerUser({ correo, contrasena, privilegio: 'cliente' });
         Alert.alert('Éxito', 'Usuario creado. Ahora inicia sesión.');
         setMode('login');
       } else {
-        const data = await loginUser({ email: correo, password: contrasena });
-        setLoggedIn(true);
-        setCurrentScreen('menu'); // Asegurarse de que al iniciar sesión se va al menú
+        const response = await loginUser({ email: correo, password: contrasena });
+        await login(response.user); // Extraer solo los datos del usuario del objeto response
+        setCurrentScreen('menu');
       }
     } catch (e) {
       Alert.alert('Error', e.message || 'Ocurrió un error');
@@ -33,33 +34,33 @@ export default function App() {
       setLoading(false);
     }
   };
-  const handleLogout = () => {
-    setLoggedIn(false);
-    setCurrentScreen('login'); // Volver a la pantalla de login al cerrar sesión
+
+  const handleLogout = async () => {
+    await logout();
   };
 
-  const handleNavigateToPedidos = () => {
-    setCurrentScreen('pedidos');
-  };
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text>Cargando...</Text>
+      </View>
+    );
+  }
 
-  const handleBackToMenu = () => {
-    setCurrentScreen('menu');
-  };
-
-  if (loggedIn) {
+  if (isLoggedIn) {
     return (
       <View style={styles.appContainer}>
         {currentScreen === 'menu' && (
-          <MenuScreen onLogout={handleLogout} onNavigateToPedidos={handleNavigateToPedidos} />
+          <MenuScreen onNavigateToPedidos={() => setCurrentScreen('pedidos')} />
         )}
         {currentScreen === 'pedidos' && (
-          <PedidosScreen onBackToMenu={handleBackToMenu} />
+          <PedidosScreen onBackToMenu={() => setCurrentScreen('menu')} />
         )}
         <View style={[styles.bottomBar, { backgroundColor: colorPrimario }]}>
-          <TouchableOpacity onPress={handleBackToMenu}>
+          <TouchableOpacity onPress={() => setCurrentScreen('menu')}>
             <Text style={styles.bottomIcon}>🧁</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleNavigateToPedidos}>
+          <TouchableOpacity onPress={() => setCurrentScreen('pedidos')}>
             <Text style={styles.bottomIcon}>🚚</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogout}>
@@ -107,6 +108,14 @@ export default function App() {
       </View>
       <StatusBar style="auto" />
     </View>
+  );
+}
+
+export default function App() {
+  return (
+    <UserProvider>
+      <AppContent />
+    </UserProvider>
   );
 }
 

@@ -1,21 +1,39 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable, SafeAreaView, StatusBar, TextInput, Alert } from 'react-native';
+import { useUser } from './contexts/UserContext';
+import { getPostres, createPostre, updatePostre, deletePostre } from './api';
 
 export default function MenuScreen() {
+  const { isAdmin, user } = useUser();
   const [selectedItem, setSelectedItem] = React.useState(null);
   const [isModalVisible, setIsModalVisible] = React.useState(false);
   const [isCartVisible, setIsCartVisible] = React.useState(false);
   const [cartItems, setCartItems] = React.useState([]); // {id, name, price, qty}
+  const [items, setItems] = React.useState([]); // Datos de la API
+  const [loading, setLoading] = React.useState(true);
+  const [isAddModalVisible, setIsAddModalVisible] = React.useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
+  const [editingItem, setEditingItem] = React.useState(null);
+  const [formData, setFormData] = React.useState({ nombre: '', descripcion: '', cantidad_disponible: '', precio: '' });
   const colorPrimario = '#ff1fa9';
 
-  const items = [
-    { id: '1', name: 'Pastel', description: 'Pastel de chocolate con nuez', stock: 8, price: 300, src: require('./assets/icon.png') },
-    { id: '2', name: 'Galletas', description: 'Galletas surtidas', stock: 15, price: 50, src: require('./assets/icon.png') },
-    { id: '3', name: 'Cupcake', description: 'Cupcake de vainilla', stock: 10, price: 45, src: require('./assets/icon.png') },
-    { id: '4', name: 'Pay', description: 'Pay de limón', stock: 6, price: 120, src: require('./assets/icon.png') },
-    { id: '5', name: 'Brownie', description: 'Brownie con nuez', stock: 12, price: 60, src: require('./assets/icon.png') },
-    { id: '6', name: 'Cheesecake', description: 'Cheesecake fresa', stock: 5, price: 140, src: require('./assets/icon.png') },
-  ];
+  // Cargar postres desde la API
+  React.useEffect(() => {
+    loadPostres();
+  }, []);
+
+  const loadPostres = async () => {
+    try {
+      setLoading(true);
+      const postres = await getPostres();
+      setItems(postres);
+    } catch (error) {
+      console.error('Error loading postres:', error);
+      Alert.alert('Error', 'No se pudieron cargar los postres');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openModal = (item) => {
     setSelectedItem(item);
@@ -27,10 +45,112 @@ export default function MenuScreen() {
     setSelectedItem(null);
   };
 
+  const openAddModal = () => {
+    setFormData({ nombre: '', descripcion: '', cantidad_disponible: '', precio: '' });
+    setIsAddModalVisible(true);
+  };
+
+  const closeAddModal = () => {
+    setIsAddModalVisible(false);
+    setFormData({ nombre: '', descripcion: '', cantidad_disponible: '', precio: '' });
+  };
+
+  const openEditModal = (item) => {
+    setEditingItem(item);
+    setFormData({
+      nombre: item.nombre,
+      descripcion: item.descripcion || '',
+      cantidad_disponible: item.cantidad_disponible?.toString() || '0',
+      precio: item.precio?.toString() || ''
+    });
+    setIsEditModalVisible(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalVisible(false);
+    setEditingItem(null);
+    setFormData({ nombre: '', descripcion: '', cantidad_disponible: '', precio: '' });
+  };
+
+  const handleCreatePostre = async () => {
+    try {
+      if (!formData.nombre || !formData.precio) {
+        Alert.alert('Error', 'Nombre y precio son requeridos');
+        return;
+      }
+
+      await createPostre({
+        nombre: formData.nombre,
+        descripcion: formData.descripcion,
+        cantidad_disponible: parseInt(formData.cantidad_disponible) || 0,
+        precio: parseFloat(formData.precio)
+      });
+
+      Alert.alert('Éxito', 'Postre creado correctamente');
+      closeAddModal();
+      loadPostres(); // Recargar la lista
+    } catch (error) {
+      console.error('Error creating postre:', error);
+      Alert.alert('Error', 'No se pudo crear el postre');
+    }
+  };
+
+  const handleUpdatePostre = async () => {
+    try {
+      if (!editingItem) return;
+
+      await updatePostre(editingItem.id, {
+        nombre: formData.nombre,
+        descripcion: formData.descripcion,
+        cantidad_disponible: parseInt(formData.cantidad_disponible) || 0,
+        precio: parseFloat(formData.precio)
+      });
+
+      Alert.alert('Éxito', 'Postre actualizado correctamente');
+      closeEditModal();
+      loadPostres(); // Recargar la lista
+    } catch (error) {
+      console.error('Error updating postre:', error);
+      Alert.alert('Error', 'No se pudo actualizar el postre');
+    }
+  };
+
+  const handleDeletePostre = async (item) => {
+    Alert.alert(
+      'Confirmar eliminación',
+      `¿Estás seguro de que quieres eliminar "${item.nombre}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePostre(item.id);
+              Alert.alert('Éxito', 'Postre eliminado correctamente');
+              loadPostres(); // Recargar la lista
+            } catch (error) {
+              console.error('Error deleting postre:', error);
+              Alert.alert('Error', 'No se pudo eliminar el postre');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.cardItem} onPress={() => openModal(item)}>
-      <Image source={item.src} style={{ width: 70, height: 70, resizeMode: 'cover' }} />
-      <Text style={styles.cardTitle}>{item.name}</Text>
+      <Image source={require('./assets/icon.png')} style={{ width: 70, height: 70, resizeMode: 'cover' }} />
+      <Text style={styles.cardTitle}>{item.nombre}</Text>
+      {isAdmin() && (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => handleDeletePostre(item)}
+        >
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 
@@ -42,7 +162,7 @@ export default function MenuScreen() {
         const newQty = Math.min(existing.qty + 1, 10);
         return prev.map((p) => (p.id === existing.id ? { ...p, qty: newQty } : p));
       }
-      return [...prev, { id: selectedItem.id, name: selectedItem.name, price: selectedItem.price, qty: 1 }];
+      return [...prev, { id: selectedItem.id, name: selectedItem.nombre, price: selectedItem.precio, qty: 1 }];
     });
     setIsModalVisible(false);
     setSelectedItem(null);
@@ -65,24 +185,59 @@ export default function MenuScreen() {
 
   const cartTotal = cartItems.reduce((sum, it) => sum + it.price * it.qty, 0);
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text>Cargando postres...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.menuHeader}>
-          <Text style={styles.menuTitle}>Menu</Text>
-          <TouchableOpacity onPress={() => setIsCartVisible(true)}>
-            <Text style={styles.cartIcon}>🛒</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <Text style={styles.menuTitle}>Menu {isAdmin() ? '(Admin)' : '(Cliente)'}</Text>
+            {/* Solo mostrar carrito si NO es admin */}
+            {!isAdmin() && (
+              <TouchableOpacity onPress={() => setIsCartVisible(true)}>
+                <Text style={styles.cartIcon}>🛒</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={styles.userInfo}>Usuario: {user?.correo || 'N/A'} | Priv: {user?.privilegio || 'N/A'}</Text>
         </View>
+
+        {/* Botón "+" circular solo para administradores */}
+        {isAdmin() && (
+          <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
+            <Text style={styles.addButtonText}>+</Text>
+          </TouchableOpacity>
+        )}
+
         <FlatList
           contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 80 }}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
           data={items}
           renderItem={renderItem}
-          keyExtractor={(it) => it.id}
+          keyExtractor={(it) => it.id.toString()}
           numColumns={2}
           style={{ width: '100%' }}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {isAdmin() 
+                  ? 'No hay postres. Usa el botón "+" para agregar uno.' 
+                  : 'Cargando postres...'}
+              </Text>
+            </View>
+          }
         />
+
+        {/* Modal de detalles del postre */}
         <Modal
           transparent
           visible={isModalVisible}
@@ -94,22 +249,40 @@ export default function MenuScreen() {
               {selectedItem && (
                 <>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={styles.modalTitle}>{selectedItem.name}</Text>
+                    <Text style={styles.modalTitle}>{selectedItem.nombre}</Text>
                     <Pressable onPress={closeModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
                   </View>
                   <Text style={styles.modalLabel}>Descripción:</Text>
-                  <Text style={styles.modalText}>{selectedItem.description}</Text>
-                  <Text style={[styles.modalText, { marginTop: 8 }]}>Cantidad disponible: {selectedItem.stock}</Text>
-                  <Text style={[styles.modalPrice]}>$ {selectedItem.price}</Text>
-                  <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]} onPress={addToCart}>
-                    <Text style={styles.addButtonText}>Agregar</Text>
-                  </TouchableOpacity>
+                  <Text style={styles.modalText}>{selectedItem.descripcion || 'Sin descripción'}</Text>
+                  <Text style={[styles.modalText, { marginTop: 8 }]}>Cantidad disponible: {selectedItem.cantidad_disponible || 0}</Text>
+                  <Text style={[styles.modalPrice]}>$ {selectedItem.precio}</Text>
+
+                  {/* Botón de editar para administradores */}
+                  {isAdmin() && (
+                    <TouchableOpacity
+                      style={[styles.editButton, { backgroundColor: colorPrimario }]}
+                      onPress={() => {
+                        closeModal();
+                        openEditModal(selectedItem);
+                      }}
+                    >
+                      <Text style={styles.editButtonText}>Editar</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* Botón de agregar al carrito solo para NO administradores */}
+                  {!isAdmin() && (
+                    <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]} onPress={addToCart}>
+                      <Text style={styles.addButtonText}>Agregar</Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               )}
             </View>
           </View>
         </Modal>
 
+        {/* Modal de carrito */}
         <Modal
           transparent
           visible={isCartVisible}
@@ -150,6 +323,104 @@ export default function MenuScreen() {
             </View>
           </View>
         </Modal>
+
+        {/* Modal para agregar postre */}
+        <Modal
+          transparent
+          visible={isAddModalVisible}
+          animationType="fade"
+          onRequestClose={closeAddModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.modalTitle}>Agregar Postre</Text>
+                <Pressable onPress={closeAddModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Nombre del postre"
+                value={formData.nombre}
+                onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Descripción"
+                value={formData.descripcion}
+                onChangeText={(text) => setFormData({ ...formData, descripcion: text })}
+                multiline
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Cantidad disponible"
+                value={formData.cantidad_disponible}
+                onChangeText={(text) => setFormData({ ...formData, cantidad_disponible: text })}
+                keyboardType="numeric"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Precio"
+                value={formData.precio}
+                onChangeText={(text) => setFormData({ ...formData, precio: text })}
+                keyboardType="numeric"
+              />
+
+              <TouchableOpacity style={[styles.addButton, { backgroundColor: colorPrimario }]} onPress={handleCreatePostre}>
+                <Text style={styles.addButtonText}>Crear Postre</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Modal para editar postre */}
+        <Modal
+          transparent
+          visible={isEditModalVisible}
+          animationType="fade"
+          onRequestClose={closeEditModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.modalTitle}>Editar Postre</Text>
+                <Pressable onPress={closeEditModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Nombre del postre"
+                value={formData.nombre}
+                onChangeText={(text) => setFormData({ ...formData, nombre: text })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Descripción"
+                value={formData.descripcion}
+                onChangeText={(text) => setFormData({ ...formData, descripcion: text })}
+                multiline
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Cantidad disponible"
+                value={formData.cantidad_disponible}
+                onChangeText={(text) => setFormData({ ...formData, cantidad_disponible: text })}
+                keyboardType="numeric"
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Precio"
+                value={formData.precio}
+                onChangeText={(text) => setFormData({ ...formData, precio: text })}
+                keyboardType="numeric"
+              />
+
+              <TouchableOpacity style={[styles.addButton, { backgroundColor: colorPrimario }]} onPress={handleUpdatePostre}>
+                <Text style={styles.addButtonText}>Actualizar Postre</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </SafeAreaView>
   );
@@ -165,10 +436,16 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
   },
-  cartRow: {
-    flexDirection: 'row',
+  emptyContainer: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 6,
+    justifyContent: 'center',
+    paddingTop: 50,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
   qtyBox: {
     flexDirection: 'row',
@@ -193,13 +470,18 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: StatusBar.currentHeight, // Asegura que el contenido esté debajo de la barra de estado
     paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    paddingBottom: 8,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
   },
   menuTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  userInfo: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
   },
   cartIcon: {
     fontSize: 20,
@@ -214,10 +496,64 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#fff',
+    position: 'relative',
   },
   cardTitle: {
     marginTop: 8,
     fontWeight: '600',
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#ff4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: 120, // Aumentado para evitar conflicto con barra de navegación
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#ff1fa9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    elevation: 10, // Agregado elevation para Android
+  },
+  addButtonText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  editButton: {
+    marginTop: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    fontSize: 16,
   },
   modalOverlay: {
     position: 'absolute',
@@ -258,15 +594,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     textAlign: 'center',
-  },
-  addButton: {
-    marginTop: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '700',
   },
 });

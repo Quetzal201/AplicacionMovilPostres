@@ -51,4 +51,33 @@ export async function loginUser({ email, password }) {
   });
 }
 
+// Funciones CRUD para postres
+export async function getPostres() {
+  return apiFetch('/api/postres');
+}
+
+export async function getPostreById(id) {
+  return apiFetch(`/api/postres/${id}`);
+}
+
+export async function createPostre(postreData) {
+  return apiFetch('/api/postres', {
+    method: 'POST',
+    body: JSON.stringify(postreData),
+  });
+}
+
+export async function updatePostre(id, postreData) {
+  return apiFetch(`/api/postres/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(postreData),
+  });
+}
+
+export async function deletePostre(id) {
+  return apiFetch(`/api/postres/${id}`, {
+    method: 'DELETE',
+  });
+}
+
 
