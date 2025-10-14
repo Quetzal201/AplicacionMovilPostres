@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Platform } 
 import React from 'react';
 import { registerUser, loginUser, API_BASE } from './api';
 import MenuScreen from './MenuScreen';
-import PedidosScreen from './PedidosScreen';
+import OrdersScreen from './screens/OrdersScreen';
 import { UserProvider, useUser } from './contexts/UserContext';
 
 function AppContent() {
@@ -13,6 +13,7 @@ function AppContent() {
   const [contrasena, setContrasena] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [currentScreen, setCurrentScreen] = React.useState('menu'); // 'menu' | 'pedidos'
+  const [ordersRefreshKey, setOrdersRefreshKey] = React.useState(0);
 
   const colorPrimario = '#ff1fa9';
 
@@ -51,16 +52,22 @@ function AppContent() {
     return (
       <View style={styles.appContainer}>
         {currentScreen === 'menu' && (
-          <MenuScreen onNavigateToPedidos={() => setCurrentScreen('pedidos')} />
+          <MenuScreen onNavigateToPedidos={() => {
+            setCurrentScreen('pedidos');
+            setOrdersRefreshKey((k) => k + 1);
+          }} />
         )}
         {currentScreen === 'pedidos' && (
-          <PedidosScreen onBackToMenu={() => setCurrentScreen('menu')} />
+          <OrdersScreen refreshKey={ordersRefreshKey} onBackToMenu={() => setCurrentScreen('menu')} />
         )}
         <View style={[styles.bottomBar, { backgroundColor: colorPrimario }]}>
           <TouchableOpacity onPress={() => setCurrentScreen('menu')}>
             <Text style={styles.bottomIcon}>🧁</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setCurrentScreen('pedidos')}>
+          <TouchableOpacity onPress={() => {
+            setCurrentScreen('pedidos');
+            setOrdersRefreshKey((k) => k + 1);
+          }}>
             <Text style={styles.bottomIcon}>🚚</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={handleLogout}>

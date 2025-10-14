@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable, SafeAreaView, StatusBar, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, Pressable, SafeAreaView, StatusBar, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useUser } from './contexts/UserContext';
-import { getPostres, createPostre, updatePostre, deletePostre } from './api';
+import { getPostres, createPostre, updatePostre, deletePostre, createOrder } from './api';
 
 export default function MenuScreen() {
   const { isAdmin, user } = useUser();
@@ -15,6 +15,8 @@ export default function MenuScreen() {
   const [isEditModalVisible, setIsEditModalVisible] = React.useState(false);
   const [editingItem, setEditingItem] = React.useState(null);
   const [formData, setFormData] = React.useState({ nombre: '', descripcion: '', cantidad_disponible: '', precio: '' });
+  const [isCheckingOut, setIsCheckingOut] = React.useState(false);
+  const [orderSuccess, setOrderSuccess] = React.useState(false);
   const colorPrimario = '#ff1fa9';
 
   // Cargar postres desde la API
@@ -155,35 +157,98 @@ export default function MenuScreen() {
   );
 
   const addToCart = () => {
-    if (!selectedItem) return;
-    setCartItems((prev) => {
-      const existing = prev.find((p) => p.id === selectedItem.id);
-      if (existing) {
-        const newQty = Math.min(existing.qty + 1, 10);
-        return prev.map((p) => (p.id === existing.id ? { ...p, qty: newQty } : p));
+    if (selectedItem) {
+      // Check if item already in cart
+      const existingItemIndex = cartItems.findIndex(item => item.id === selectedItem.id);
+      
+      if (existingItemIndex >= 0) {
+        // Update quantity if item exists
+        const updatedCart = [...cartItems];
+        updatedCart[existingItemIndex].qty += 1;
+        setCartItems(updatedCart);
+      } else {
+        // Add new item to cart
+        setCartItems([...cartItems, { ...selectedItem, qty: 1 }]);
       }
-      return [...prev, { id: selectedItem.id, name: selectedItem.nombre, price: selectedItem.precio, qty: 1 }];
-    });
-    setIsModalVisible(false);
-    setSelectedItem(null);
-    setIsCartVisible(true);
+      
+      setIsModalVisible(false);
+      Alert.alert('¡Añadido!', `${selectedItem.nombre} ha sido añadido al carrito`);
+    }
+  };
+
+  const updateCartItemQty = (itemId, newQty) => {
+    if (newQty < 1) {
+      removeFromCart(itemId);
+      return;
+    }
+    
+    setCartItems(cartItems.map(item => 
+      item.id === itemId ? { ...item, qty: newQty } : item
+    ));
+  };
+
+  const removeFromCart = (itemId) => {
+    setCartItems(cartItems.filter(item => item.id !== itemId));
   };
 
   const incrementItem = (id) => {
-    setCartItems((prev) => prev
-      .map((p) => (p.id === id ? { ...p, qty: Math.min(p.qty + 1, 10) } : p)));
+    const item = cartItems.find(item => item.id === id);
+    if (item) {
+      updateCartItemQty(id, item.qty + 1);
+    }
   };
 
   const decrementItem = (id) => {
-    setCartItems((prev) => {
-      const updated = prev
-        .map((p) => (p.id === id ? { ...p, qty: Math.max(p.qty - 1, 0) } : p))
-        .filter((p) => p.qty > 0);
-      return updated;
-    });
+    const item = cartItems.find(item => item.id === id);
+    if (item) {
+      updateCartItemQty(id, item.qty - 1);
+    }
   };
 
-  const cartTotal = cartItems.reduce((sum, it) => sum + it.price * it.qty, 0);
+  const calculateTotal = () => {
+    return cartItems.reduce((total, item) => total + (item.precio * item.qty), 0).toFixed(2);
+  };
+
+  const handleCheckout = async () => {
+    if (!user) {
+      Alert.alert('Error', 'Debes iniciar sesión para realizar un pedido');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      Alert.alert('Carrito vacío', 'Agrega productos al carrito antes de pagar');
+      return;
+    }
+
+    try {
+      setIsCheckingOut(true);
+      
+      // Prepare order items for the API
+      const orderItems = cartItems.map(item => ({
+        postre_id: item.id,
+        cantidad: item.qty
+      }));
+
+      // Create the order
+      await createOrder(user.id, orderItems);
+      
+      // Clear cart and show success
+      setCartItems([]);
+      setOrderSuccess(true);
+      
+      // Hide success message after 3 seconds
+      setTimeout(() => {
+        setOrderSuccess(false);
+        setIsCartVisible(false);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error al realizar el pedido:', error);
+      Alert.alert('Error', 'No se pudo completar el pedido. Por favor, inténtalo de nuevo.');
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -290,35 +355,83 @@ export default function MenuScreen() {
           onRequestClose={() => setIsCartVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.modalTitle}>Carrito</Text>
-                <Pressable onPress={() => setIsCartVisible(false)}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
+            <View style={[styles.modalCard, { maxHeight: '80%' }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={styles.modalTitle}>Carrito de Compras</Text>
+                <Pressable onPress={() => setIsCartVisible(false)}>
+                  <Text style={{ fontSize: 20, color: '#666' }}>✕</Text>
+                </Pressable>
               </View>
 
-              {cartItems.length === 0 ? (
-                <Text style={{ marginTop: 12 }}>Tu carrito está vacío</Text>
+              {orderSuccess ? (
+                <View style={styles.successContainer}>
+                  <Text style={styles.successText}>¡Pedido realizado con éxito!</Text>
+                  <Text style={styles.successSubtext}>Puedes ver el estado de tu pedido en la sección de Mis Pedidos</Text>
+                </View>
               ) : (
-                <View style={{ marginTop: 12 }}>
-                  {cartItems.map((it) => (
-                    <View key={it.id} style={styles.cartRow}>
-                      <Text style={{ flex: 1 }}>{it.name}</Text>
-                      <View style={styles.qtyBox}>
-                        <TouchableOpacity onPress={() => decrementItem(it.id)}>
-                          <Text style={styles.qtyBtn}>-</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.qtyText}>{it.qty}</Text>
-                        <TouchableOpacity onPress={() => incrementItem(it.id)}>
-                          <Text style={styles.qtyBtn}>+</Text>
+                <>
+                  {cartItems.length === 0 ? (
+                    <View style={styles.emptyCartContainer}>
+                      <Text style={styles.emptyCartText}>Tu carrito está vacío</Text>
+                      <Text style={styles.emptyCartSubtext}>Agrega productos para continuar</Text>
+                    </View>
+                  ) : (
+                    <>
+                      <FlatList
+                        data={cartItems}
+                        keyExtractor={(item) => item.id.toString()}
+                        renderItem={({ item }) => (
+                          <View style={styles.cartItem}>
+                            <Image source={require('./assets/icon.png')} style={styles.cartItemThumb} />
+                            <View style={styles.cartItemInfo}>
+                              <Text style={styles.cartItemName}>{item.nombre}</Text>
+                              <Text style={styles.cartItemPrice}>${(item.precio * item.qty).toFixed(2)}</Text>
+                            </View>
+                            <View style={styles.cartItemActions}>
+                              <TouchableOpacity 
+                                style={[styles.qtyButton, styles.qtyButtonMinus]}
+                                onPress={() => decrementItem(item.id)}
+                              >
+                                <Text style={styles.qtyButtonText}>-</Text>
+                              </TouchableOpacity>
+                              <Text style={styles.cartItemQty}>{item.qty}</Text>
+                              <TouchableOpacity 
+                                style={[styles.qtyButton, styles.qtyButtonPlus]}
+                                onPress={() => incrementItem(item.id)}
+                              >
+                                <Text style={styles.qtyButtonText}>+</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity 
+                                style={styles.removeButton}
+                                onPress={() => removeFromCart(item.id)}
+                              >
+                                <Text style={styles.removeButtonText}>🗑️</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
+                        contentContainerStyle={{ paddingBottom: 16 }}
+                      />
+                      <View style={styles.cartFooter}>
+                        <View style={styles.totalContainer}>
+                          <Text style={styles.totalLabel}>Total:</Text>
+                          <Text style={styles.totalAmount}>${calculateTotal()}</Text>
+                        </View>
+                        <TouchableOpacity 
+                          style={[styles.checkoutButton, isCheckingOut && styles.checkoutButtonDisabled]}
+                          onPress={handleCheckout}
+                          disabled={isCheckingOut}
+                        >
+                          {isCheckingOut ? (
+                            <ActivityIndicator color="#fff" />
+                          ) : (
+                            <Text style={styles.checkoutButtonText}>Realizar Pedido</Text>
+                          )}
                         </TouchableOpacity>
                       </View>
-                    </View>
-                  ))}
-                  <Text style={[styles.modalText, { marginTop: 8 }]}>Total: {cartTotal}</Text>
-                  <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]}>
-                    <Text style={styles.addButtonText}>Comprar</Text>
-                  </TouchableOpacity>
-                </View>
+                    </>
+                  )}
+                </>
               )}
             </View>
           </View>
@@ -584,15 +697,5 @@ const styles = StyleSheet.create({
   modalLabel: {
     marginTop: 12,
     fontWeight: '600',
-  },
-  modalText: {
-    marginTop: 6,
-    color: '#333',
-  },
-  modalPrice: {
-    marginTop: 12,
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
+ },
 });

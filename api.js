@@ -23,10 +23,34 @@ export async function apiFetch(path, options = {}) {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
   };
+  // Debug: log outgoing request
+  try {
+    console.log('[apiFetch][request]', {
+      method: (options.method || 'GET'),
+      url,
+      path,
+      body: options.body ? safeJsonParse(options.body) : undefined,
+    });
+  } catch (e) {
+    // ignore logging errors
+  }
+
   const response = await fetch(url, { ...options, headers });
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
   const data = isJson ? await response.json() : await response.text();
+
+  // Debug: log incoming response
+  try {
+    console.log('[apiFetch][response]', {
+      url,
+      status: response.status,
+      ok: response.ok,
+      data,
+    });
+  } catch (e) {
+    // ignore logging errors
+  }
   if (!response.ok) {
     const message = isJson && data && data.error ? data.error : `HTTP ${response.status}`;
     const error = new Error(message);
@@ -35,6 +59,11 @@ export async function apiFetch(path, options = {}) {
     throw error;
   }
   return data;
+}
+
+// Helper para evitar romper logs al parsear cuerpos JSON como string
+function safeJsonParse(str) {
+  try { return JSON.parse(str); } catch { return str; }
 }
 
 export async function registerUser({ correo, contrasena, privilegio = 'cliente' }) {
@@ -78,6 +107,36 @@ export async function deletePostre(id) {
   return apiFetch(`/api/postres/${id}`, {
     method: 'DELETE',
   });
+}
+
+// Funciones para pedidos
+export async function createOrder(usuarioId, items) {
+  return apiFetch('/api/pedidos', {
+    method: 'POST',
+    body: JSON.stringify({ usuario_id: usuarioId, items }),
+  });
+}
+
+export async function getOrders(userId, isAdminUser) {
+  const path = isAdminUser ? '/api/pedidos' : `/api/pedidos/usuario/${userId}`;
+  return apiFetch(path);
+}
+
+export async function updateOrderStatus(orderId, newStatus) {
+  return apiFetch(`/api/pedidos/${orderId}/estado`, {
+    method: 'PATCH',
+    body: JSON.stringify({ estado: newStatus }),
+  });
+}
+
+// Obtener detalles de un pedido específico
+export async function getOrderDetails(orderId) {
+  return apiFetch(`/api/pedidos/${orderId}`);
+}
+
+// Obtener items de un pedido
+export async function getOrderItems(orderId) {
+  return apiFetch(`/api/pedidos/${orderId}/items`);
 }
 
 
