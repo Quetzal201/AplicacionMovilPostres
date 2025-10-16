@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, SafeAreaView, StatusBar, ActivityIndicator } from 'react-native';
 import { useUser } from '../contexts/UserContext';
-import { getOrders, updateOrderStatus } from '../api';
+import { getOrders, updateOrderStatus, getPostreById, getOrderDetails } from '../api';
 import { API_BASE } from '../api';
 
 const OrderStatus = ({ status }) => {
@@ -35,6 +35,17 @@ const OrderItem = ({ item, isAdmin, onStatusUpdate }) => {
         </View>
       </View>
       
+      {Array.isArray(item.items) && item.items.length > 0 && (
+        <View style={styles.itemsBlock}>
+          {item.items.map((it, idx) => (
+            <View key={`${item.id}-${idx}`} style={styles.itemRow}>
+              <Text style={styles.itemName} numberOfLines={1}>{it.nombre || `Postre ${it.postre_id}`}</Text>
+              <Text style={styles.itemMeta}>x{it.cantidad}  ·  ${Number(it.subtotal || (it.cantidad * (it.precio_unitario || 0))).toFixed(2)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <Text style={styles.orderDate}>{formatDate(item.fecha_creacion)}</Text>
       <Text style={styles.orderTotal}>Total: ${item.total.toFixed(2)}</Text>
       
@@ -72,7 +83,32 @@ export default function OrdersScreen({ refreshKey }) {
       console.log('OrdersScreen - Cargando pedidos para usuario:', user.id, 'isAdmin:', isAdmin());
       const data = await getOrders(user.id, isAdmin());
       console.log('OrdersScreen - Datos recibidos:', data);
-      setOrders(data || []);
+
+      // Enriquecer con items y nombres de postre
+      const enriched = await Promise.all((data || []).map(async (ord) => {
+        try {
+          const details = await getOrderDetails(ord.id);
+          const items = Array.isArray(details.items) ? details.items : [];
+          const nameCache = {};
+          const withNames = await Promise.all(items.map(async (it) => {
+            if (!nameCache[it.postre_id]) {
+              try {
+                const p = await getPostreById(it.postre_id);
+                nameCache[it.postre_id] = p?.nombre || `Postre ${it.postre_id}`;
+              } catch {
+                nameCache[it.postre_id] = `Postre ${it.postre_id}`;
+              }
+            }
+            return { ...it, nombre: nameCache[it.postre_id] };
+          }));
+          return { ...ord, items: withNames };
+        } catch (e) {
+          console.warn('OrdersScreen - No se pudieron cargar items del pedido', ord.id, e);
+          return { ...ord, items: [] };
+        }
+      }));
+
+      setOrders(enriched);
     } catch (error) {
       console.error('OrdersScreen - Error cargando pedidos:', error);
       Alert.alert('Error', `No se pudieron cargar tus pedidos: ${error.message || 'Error de conexión'}`);
@@ -118,9 +154,12 @@ export default function OrdersScreen({ refreshKey }) {
       <View style={styles.container}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>Mis Pedidos</Text>
-          <TouchableOpacity onPress={loadOrders}>
-            <Text style={styles.refreshIcon}>⟳</Text>
-          </TouchableOpacity>
+          <View style={styles.titleActions}>
+            {loading && <ActivityIndicator size="small" color="#f59e0b" />}
+            <TouchableOpacity onPress={loadOrders} style={styles.roundButtonYellow}>
+              <Text style={styles.roundButtonText}>⟳</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         
         {loading ? (
@@ -176,6 +215,35 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#1f2937',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  titleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  spinner: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#f59e0b',
+    borderTopColor: 'transparent',
+  },
+  roundButtonYellow: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  roundButtonText: {
+    color: '#111827',
+    fontWeight: '800',
+  },
   listContainer: {
     paddingBottom: 20,
   },
@@ -194,6 +262,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  itemsBlock: {
+    marginBottom: 8,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  itemName: {
+    flex: 1,
+    marginRight: 8,
+    color: '#111827',
+  },
+  itemMeta: {
+    color: '#6b7280',
   },
   orderId: {
     fontSize: 16,

@@ -313,32 +313,31 @@ export default function MenuScreen() {
             <View style={styles.modalCard}>
               {selectedItem && (
                 <>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={styles.modalHeader}>
                     <Text style={styles.modalTitle}>{selectedItem.nombre}</Text>
-                    <Pressable onPress={closeModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
+                    <Pressable style={styles.modalClose} onPress={closeModal}><Text style={styles.modalCloseText}>✕</Text></Pressable>
                   </View>
-                  <Text style={styles.modalLabel}>Descripción:</Text>
+                  <View style={styles.divider} />
+                  <Text style={styles.modalLabel}>Descripción</Text>
                   <Text style={styles.modalText}>{selectedItem.descripcion || 'Sin descripción'}</Text>
                   <Text style={[styles.modalText, { marginTop: 8 }]}>Cantidad disponible: {selectedItem.cantidad_disponible || 0}</Text>
-                  <Text style={[styles.modalPrice]}>$ {selectedItem.precio}</Text>
+                  <Text style={styles.modalPrice}>$ {selectedItem.precio}</Text>
 
-                  {/* Botón de editar para administradores */}
                   {isAdmin() && (
                     <TouchableOpacity
-                      style={[styles.editButton, { backgroundColor: colorPrimario }]}
+                      style={[styles.primaryButton]}
                       onPress={() => {
                         closeModal();
                         openEditModal(selectedItem);
                       }}
                     >
-                      <Text style={styles.editButtonText}>Editar</Text>
+                      <Text style={styles.primaryButtonText}>Editar</Text>
                     </TouchableOpacity>
                   )}
 
-                  {/* Botón de agregar al carrito solo para NO administradores */}
                   {!isAdmin() && (
-                    <TouchableOpacity style={[styles.addButton, { backgroundColor: '#22c55e' }]} onPress={addToCart}>
-                      <Text style={styles.addButtonText}>Agregar</Text>
+                    <TouchableOpacity style={[styles.primaryButton, { backgroundColor: '#22c55e' }]} onPress={addToCart}>
+                      <Text style={styles.primaryButtonText}>Agregar al carrito</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -355,13 +354,14 @@ export default function MenuScreen() {
           onRequestClose={() => setIsCartVisible(false)}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalCard, { maxHeight: '80%' }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Text style={styles.modalTitle}>Carrito de Compras</Text>
-                <Pressable onPress={() => setIsCartVisible(false)}>
-                  <Text style={{ fontSize: 20, color: '#666' }}>✕</Text>
+            <View style={[styles.modalCard, styles.sheetCard]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Carrito</Text>
+                <Pressable style={styles.modalClose} onPress={() => setIsCartVisible(false)}>
+                  <Text style={styles.modalCloseText}>✕</Text>
                 </Pressable>
               </View>
+              <View style={styles.divider} />
 
               {orderSuccess ? (
                 <View style={styles.successContainer}>
@@ -382,9 +382,8 @@ export default function MenuScreen() {
                         keyExtractor={(item) => item.id.toString()}
                         renderItem={({ item }) => (
                           <View style={styles.cartItem}>
-                            <Image source={require('./assets/icon.png')} style={styles.cartItemThumb} />
                             <View style={styles.cartItemInfo}>
-                              <Text style={styles.cartItemName}>{item.nombre}</Text>
+                              <Text style={styles.cartItemName} numberOfLines={1}>{item.nombre}</Text>
                               <Text style={styles.cartItemPrice}>${(item.precio * item.qty).toFixed(2)}</Text>
                             </View>
                             <View style={styles.cartItemActions}>
@@ -392,20 +391,20 @@ export default function MenuScreen() {
                                 style={[styles.qtyButton, styles.qtyButtonMinus]}
                                 onPress={() => decrementItem(item.id)}
                               >
-                                <Text style={styles.qtyButtonText}>-</Text>
+                                <Text style={styles.qtyButtonText}>−</Text>
                               </TouchableOpacity>
                               <Text style={styles.cartItemQty}>{item.qty}</Text>
                               <TouchableOpacity 
                                 style={[styles.qtyButton, styles.qtyButtonPlus]}
                                 onPress={() => incrementItem(item.id)}
                               >
-                                <Text style={styles.qtyButtonText}>+</Text>
+                                <Text style={styles.qtyButtonText}>＋</Text>
                               </TouchableOpacity>
                               <TouchableOpacity 
                                 style={styles.removeButton}
                                 onPress={() => removeFromCart(item.id)}
                               >
-                                <Text style={styles.removeButtonText}>🗑️</Text>
+                                <Text style={styles.removeButtonText}>✕</Text>
                               </TouchableOpacity>
                             </View>
                           </View>
@@ -418,14 +417,14 @@ export default function MenuScreen() {
                           <Text style={styles.totalAmount}>${calculateTotal()}</Text>
                         </View>
                         <TouchableOpacity 
-                          style={[styles.checkoutButton, isCheckingOut && styles.checkoutButtonDisabled]}
+                          style={[styles.primaryButton, styles.checkoutButton, isCheckingOut && styles.checkoutButtonDisabled]}
                           onPress={handleCheckout}
                           disabled={isCheckingOut}
                         >
                           {isCheckingOut ? (
                             <ActivityIndicator color="#fff" />
                           ) : (
-                            <Text style={styles.checkoutButtonText}>Realizar Pedido</Text>
+                            <Text style={styles.primaryButtonText}>Realizar Pedido</Text>
                           )}
                         </TouchableOpacity>
                       </View>
@@ -446,10 +445,11 @@ export default function MenuScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Agregar Postre</Text>
-                <Pressable onPress={closeAddModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
+                <Pressable style={styles.modalClose} onPress={closeAddModal}><Text style={styles.modalCloseText}>✕</Text></Pressable>
               </View>
+              <View style={styles.divider} />
 
               <TextInput
                 style={styles.input}
@@ -479,8 +479,8 @@ export default function MenuScreen() {
                 keyboardType="numeric"
               />
 
-              <TouchableOpacity style={[styles.addButton, { backgroundColor: colorPrimario }]} onPress={handleCreatePostre}>
-                <Text style={styles.addButtonText}>Crear Postre</Text>
+              <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colorPrimario }]} onPress={handleCreatePostre}>
+                <Text style={styles.primaryButtonText}>Crear Postre</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -495,10 +495,11 @@ export default function MenuScreen() {
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Editar Postre</Text>
-                <Pressable onPress={closeEditModal}><Text style={{ fontSize: 18 }}>✕</Text></Pressable>
+                <Pressable style={styles.modalClose} onPress={closeEditModal}><Text style={styles.modalCloseText}>✕</Text></Pressable>
               </View>
+              <View style={styles.divider} />
 
               <TextInput
                 style={styles.input}
@@ -528,8 +529,8 @@ export default function MenuScreen() {
                 keyboardType="numeric"
               />
 
-              <TouchableOpacity style={[styles.addButton, { backgroundColor: colorPrimario }]} onPress={handleUpdatePostre}>
-                <Text style={styles.addButtonText}>Actualizar Postre</Text>
+              <TouchableOpacity style={[styles.primaryButton, { backgroundColor: colorPrimario }]} onPress={handleUpdatePostre}>
+                <Text style={styles.primaryButtonText}>Actualizar Postre</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -697,5 +698,153 @@ const styles = StyleSheet.create({
   modalLabel: {
     marginTop: 12,
     fontWeight: '600',
- },
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalClose: {
+    padding: 6,
+    borderRadius: 16,
+  },
+  modalCloseText: {
+    fontSize: 18,
+    color: '#4B5563',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
+  },
+  sheetCard: {
+    maxHeight: '80%',
+  },
+  // Cart styles
+  cartItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cartItemInfo: {
+    flex: 1,
+    marginRight: 10,
+  },
+  cartItemName: {
+    fontWeight: '600',
+    color: '#111827',
+  },
+  cartItemPrice: {
+    marginTop: 2,
+    color: '#6B7280',
+  },
+  cartItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  qtyButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  qtyButtonMinus: {
+    backgroundColor: '#FEE2E2',
+  },
+  qtyButtonPlus: {
+    backgroundColor: '#DCFCE7',
+  },
+  qtyButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  cartItemQty: {
+    width: 28,
+    textAlign: 'center',
+    fontWeight: '600',
+    color: '#111827',
+  },
+  removeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE2E2',
+    marginLeft: 4,
+  },
+  removeButtonText: {
+    color: '#EF4444',
+    fontWeight: '800',
+  },
+  cartFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+  },
+  totalContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  totalLabel: {
+    fontWeight: '700',
+  },
+  totalAmount: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  primaryButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: '#111827',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+  },
+  checkoutButton: {
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  checkoutButtonDisabled: {
+    opacity: 0.6,
+  },
+  emptyCartContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  emptyCartText: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  emptyCartSubtext: {
+    marginTop: 4,
+    color: '#6B7280',
+  },
+  successContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  successText: {
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  successSubtext: {
+    color: '#6B7280',
+    textAlign: 'center',
+  },
 });
